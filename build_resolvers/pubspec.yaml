@@ -12,6 +12,8 @@ dependencies:
   crypto: ^2.0.0
   graphs: ^0.2.0
   logging: ^0.11.2
+  package_config: ^1.9.0
+  pub_semver: ^1.4.0
   path: ^1.1.0
   yaml: ^2.0.0
 
@@ -27,3 +29,5 @@ dependency_overrides:
     path: ../build_vm_compilers
   build_modules:
     path: ../build_modules
+  # analyzer:
+  #   path: ../../dart-lang-sdk/sdk/pkg/analyzer

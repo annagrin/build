@@ -2,6 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:isolate';
+
+import 'package:analyzer/src/context/packages.dart' show Package, Packages;
 import 'package:analyzer/src/dart/analysis/byte_store.dart'
     show MemoryByteStore;
 import 'package:analyzer/src/dart/analysis/driver.dart';
@@ -13,6 +16,9 @@ import 'package:analyzer/src/generated/engine.dart'
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/summary/package_bundle_reader.dart';
 import 'package:analyzer/src/summary/summary_sdk.dart' show SummaryBasedDartSdk;
+import 'package:package_config/package_config.dart'
+    show PackageConfig, loadPackageConfigUri;
+import 'package:pub_semver/pub_semver.dart';
 
 import 'build_asset_uri_resolver.dart';
 
@@ -21,8 +27,12 @@ import 'build_asset_uri_resolver.dart';
 ///
 /// Any code which is not covered by the summaries must be resolvable through
 /// [buildAssetUriResolver].
-AnalysisDriver analysisDriver(BuildAssetUriResolver buildAssetUriResolver,
-    AnalysisOptions analysisOptions, String sdkSummaryPath) {
+Future<AnalysisDriver> analysisDriver(
+    BuildAssetUriResolver buildAssetUriResolver,
+    AnalysisOptions analysisOptions,
+    String sdkSummaryPath,
+    {PackageConfig packageConfig}) async {
+  packageConfig ??= await loadPackageConfigUri(await Isolate.packageConfig);
   var sdk = SummaryBasedDartSdk(sdkSummaryPath, true);
   var sdkResolver = DartUriResolver(sdk);
 
@@ -33,17 +43,28 @@ AnalysisDriver analysisDriver(BuildAssetUriResolver buildAssetUriResolver,
 
   var logger = PerformanceLog(null);
   var scheduler = AnalysisDriverScheduler(logger);
+  var resourceProvider = buildAssetUriResolver.resourceProvider;
   var driver = AnalysisDriver(
-    scheduler,
-    logger,
-    buildAssetUriResolver.resourceProvider,
-    MemoryByteStore(),
-    FileContentOverlay(),
-    null,
-    sourceFactory,
-    (analysisOptions as AnalysisOptionsImpl) ?? AnalysisOptionsImpl(),
-    externalSummaries: dataStore,
-  );
+      scheduler,
+      logger,
+      resourceProvider,
+      MemoryByteStore(),
+      FileContentOverlay(),
+      null,
+      sourceFactory,
+      (analysisOptions as AnalysisOptionsImpl) ?? AnalysisOptionsImpl(),
+      externalSummaries: dataStore,
+      packages: Packages({
+        for (var pkg in packageConfig.packages)
+          pkg.name: Package(
+            name: pkg.name,
+            rootFolder: resourceProvider.getFolder(pkg.root.toFilePath()),
+            libFolder:
+                resourceProvider.getFolder(pkg.packageUriRoot.toFilePath()),
+            languageVersion: Version(
+                pkg.languageVersion.major, pkg.languageVersion.minor, 0),
+          )
+      }));
 
   scheduler.start();
   return driver;
