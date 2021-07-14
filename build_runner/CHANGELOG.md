@@ -1,3 +1,8 @@
+## 2.1.0
+
+- Add `--log-requests` flag to build daemon.
+- Log failed asset requests in build_runner server.
+
 ## 2.0.5
 
 - Don't set the content length header or body when responding to HEAD requests.
