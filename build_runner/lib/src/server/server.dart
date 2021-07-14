@@ -658,7 +658,7 @@ shelf.Handler _logRequests(shelf.Handler innerHandler) {
           request.requestedUri, request.method, watch.elapsed);
       logFn(msg);
       return response;
-    }, onError: (Object error, StackTrace stackTrace) {
+    }).catchError((Object error, StackTrace stackTrace) {
       if (error is shelf.HijackException) throw error;
       var msg = _getMessage(
           startTime, 500, request.requestedUri, request.method, watch.elapsed);
